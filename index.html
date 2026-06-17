@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>QUAD//FEED</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+background: #030308;
+color: #e0e0ff;
+font-family: ‘Courier New’, monospace;
+min-height: 100vh;
+overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::before {
+content: ‘’;
+position: fixed;
+top: 0; left: 0; right: 0; bottom: 0;
+background: repeating-linear-gradient(
+0deg,
+transparent,
+transparent 2px,
+rgba(0,255,200,0.015) 2px,
+rgba(0,255,200,0.015) 4px
+);
+pointer-events: none;
+z-index: 9999;
+}
+
+header {
+padding: 10px 14px 6px;
+border-bottom: 1px solid #00ffe0;
+display: flex;
+align-items: center;
+justify-content: space-between;
+background: #030308;
+position: sticky;
+top: 0;
+z-index: 100;
+}
+
+header h1 {
+font-size: 18px;
+font-weight: 700;
+letter-spacing: 4px;
+color: #00ffe0;
+text-shadow: 0 0 10px #00ffe0, 0 0 30px #00ffe060;
+}
+
+header .status {
+font-size: 10px;
+color: #ff00aa;
+letter-spacing: 2px;
+text-shadow: 0 0 8px #ff00aa;
+animation: blink 2s infinite;
+}
+
+@keyframes blink {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.3; }
+}
+
+.panels {
+display: flex;
+flex-direction: column;
+gap: 0;
+padding: 0;
+}
+
+/* ── PANEL BASE ── */
+.panel {
+border-bottom: 1px solid #1a1a3a;
+background: #07070f;
+position: relative;
+}
+
+.panel-header {
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 7px 10px 5px;
+background: #0a0a18;
+border-bottom: 1px solid #1a1a3a;
+}
+
+.panel-num {
+font-size: 9px;
+letter-spacing: 2px;
+color: #ff00aa;
+text-shadow: 0 0 6px #ff00aa;
+}
+
+.panel-label {
+font-size: 10px;
+letter-spacing: 3px;
+color: #00ffe0;
+flex: 1;
+text-shadow: 0 0 6px #00ffe060;
+}
+
+/* URL input row */
+.url-row {
+display: flex;
+gap: 6px;
+padding: 6px 8px;
+background: #050510;
+border-bottom: 1px solid #111128;
+}
+
+.url-input {
+flex: 1;
+background: #0d0d20;
+border: 1px solid #2a2a5a;
+border-radius: 3px;
+color: #a0a0ff;
+font-family: ‘Courier New’, monospace;
+font-size: 11px;
+padding: 5px 8px;
+outline: none;
+transition: border-color 0.2s;
+}
+
+.url-input:focus {
+border-color: #00ffe0;
+box-shadow: 0 0 6px #00ffe040;
+}
+
+.url-input::placeholder {
+color: #3a3a6a;
+}
+
+.btn-load {
+background: transparent;
+border: 1px solid #00ffe0;
+color: #00ffe0;
+font-family: ‘Courier New’, monospace;
+font-size: 10px;
+letter-spacing: 1px;
+padding: 5px 10px;
+border-radius: 3px;
+cursor: pointer;
+text-shadow: 0 0 6px #00ffe0;
+box-shadow: 0 0 6px #00ffe020;
+transition: all 0.15s;
+white-space: nowrap;
+}
+
+.btn-load:active {
+background: #00ffe020;
+box-shadow: 0 0 12px #00ffe060;
+}
+
+/* Video frame */
+.video-frame {
+position: relative;
+width: 100%;
+padding-bottom: 56.25%;
+background: #02020a;
+overflow: hidden;
+}
+
+.video-frame iframe {
+position: absolute;
+top: 0; left: 0;
+width: 100%; height: 100%;
+border: none;
+}
+
+.video-placeholder {
+position: absolute;
+top: 0; left: 0; right: 0; bottom: 0;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 8px;
+color: #2a2a5a;
+}
+
+.video-placeholder .icon {
+font-size: 32px;
+opacity: 0.4;
+}
+
+.video-placeholder .txt {
+font-size: 10px;
+letter-spacing: 2px;
+color: #2a2a5a;
+}
+
+/* Video controls */
+.vid-controls {
+display: flex;
+align-items: center;
+gap: 6px;
+padding: 6px 8px;
+background: #060610;
+border-top: 1px solid #111128;
+flex-wrap: wrap;
+}
+
+.ctrl-btn {
+background: transparent;
+border: 1px solid #ff00aa44;
+color: #ff00aa;
+font-family: ‘Courier New’, monospace;
+font-size: 10px;
+padding: 4px 8px;
+border-radius: 3px;
+cursor: pointer;
+letter-spacing: 1px;
+transition: all 0.15s;
+text-shadow: 0 0 4px #ff00aa80;
+}
+
+.ctrl-btn:active {
+background: #ff00aa20;
+box-shadow: 0 0 8px #ff00aa60;
+}
+
+.ctrl-btn.muted {
+color: #555588;
+border-color: #33334a;
+text-shadow: none;
+}
+
+.ctrl-btn.pip-btn {
+color: #aa00ff;
+border-color: #aa00ff44;
+text-shadow: 0 0 4px #aa00ff80;
+margin-left: auto;
+}
+
+.ctrl-btn.pip-btn:active {
+background: #aa00ff20;
+}
+
+/* ── GIF PANEL ── */
+.gif-panel {
+border-bottom: none;
+}
+
+.gif-display {
+width: 100%;
+min-height: 200px;
+background: #02020a;
+display: flex;
+align-items: center;
+justify-content: center;
+position: relative;
+overflow: hidden;
+}
+
+.gif-display img {
+width: 100%;
+height: 100%;
+object-fit: contain;
+display: block;
+max-height: 240px;
+}
+
+.gif-display .gif-placeholder {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 8px;
+color: #2a2a5a;
+}
+
+.gif-display .gif-placeholder .icon {
+font-size: 36px;
+opacity: 0.3;
+}
+
+.gif-display .gif-placeholder .txt {
+font-size: 10px;
+letter-spacing: 2px;
+}
+
+.gif-counter {
+position: absolute;
+top: 6px;
+right: 8px;
+font-size: 10px;
+letter-spacing: 2px;
+color: #aa00ff;
+text-shadow: 0 0 6px #aa00ff;
+background: #02020acc;
+padding: 2px 6px;
+border-radius: 2px;
+}
+
+/* Progress bar */
+.gif-progress {
+height: 2px;
+background: #1a1a3a;
+position: relative;
+}
+
+.gif-progress-bar {
+height: 100%;
+background: linear-gradient(90deg, #aa00ff, #ff00aa);
+box-shadow: 0 0 6px #ff00aa;
+width: 0%;
+transition: width 0.1s linear;
+}
+
+/* GIF controls */
+.gif-controls {
+display: flex;
+align-items: center;
+gap: 6px;
+padding: 6px 8px;
+background: #060610;
+border-top: 1px solid #111128;
+}
+
+.gif-btn {
+background: transparent;
+border: 1px solid #aa00ff44;
+color: #aa00ff;
+font-family: ‘Courier New’, monospace;
+font-size: 11px;
+padding: 5px 10px;
+border-radius: 3px;
+cursor: pointer;
+text-shadow: 0 0 4px #aa00ff80;
+letter-spacing: 1px;
+transition: all 0.15s;
+}
+
+.gif-btn:active {
+background: #aa00ff20;
+box-shadow: 0 0 8px #aa00ff60;
+}
+
+.gif-btn.paused {
+color: #555588;
+border-color: #33334a;
+text-shadow: none;
+}
+
+.gif-info {
+flex: 1;
+font-size: 10px;
+color: #5a5a8a;
+letter-spacing: 1px;
+text-align: center;
+}
+
+/* GIF URL list */
+.gif-list-area {
+padding: 6px 8px;
+background: #050510;
+border-top: 1px solid #111128;
+}
+
+.gif-list-label {
+font-size: 9px;
+letter-spacing: 2px;
+color: #5a5a8a;
+margin-bottom: 4px;
+}
+
+.gif-textarea {
+width: 100%;
+background: #0d0d20;
+border: 1px solid #2a2a5a;
+border-radius: 3px;
+color: #a0a0ff;
+font-family: ‘Courier New’, monospace;
+font-size: 11px;
+padding: 6px 8px;
+height: 80px;
+resize: none;
+outline: none;
+transition: border-color 0.2s;
+}
+
+.gif-textarea:focus {
+border-color: #aa00ff;
+box-shadow: 0 0 6px #aa00ff40;
+}
+
+.gif-textarea::placeholder {
+color: #2a2a5a;
+}
+
+.gif-load-row {
+display: flex;
+gap: 6px;
+margin-top: 5px;
+}
+
+.btn-gif-load {
+flex: 1;
+background: transparent;
+border: 1px solid #aa00ff;
+color: #aa00ff;
+font-family: ‘Courier New’, monospace;
+font-size: 10px;
+letter-spacing: 2px;
+padding: 6px;
+border-radius: 3px;
+cursor: pointer;
+text-shadow: 0 0 6px #aa00ff;
+box-shadow: 0 0 6px #aa00ff20;
+transition: all 0.15s;
+}
+
+.btn-gif-load:active {
+background: #aa00ff20;
+box-shadow: 0 0 12px #aa00ff60;
+}
+
+/* Corner decorations */
+.corner-tl, .corner-br {
+position: absolute;
+width: 10px;
+height: 10px;
+pointer-events: none;
+}
+.corner-tl {
+top: 0; left: 0;
+border-top: 2px solid #00ffe0;
+border-left: 2px solid #00ffe0;
+}
+.corner-br {
+bottom: 0; right: 0;
+border-bottom: 2px solid #00ffe0;
+border-right: 2px solid #00ffe0;
+}
+
+.divider {
+height: 1px;
+background: linear-gradient(90deg, transparent, #00ffe040, transparent);
+margin: 0;
+}
+
+footer {
+padding: 10px;
+text-align: center;
+font-size: 9px;
+letter-spacing: 3px;
+color: #2a2a4a;
+border-top: 1px solid #1a1a3a;
+}
+</style>
+
+</head>
+<body>
+
+<header>
+  <h1>QUAD//FEED</h1>
+  <div class="status">LIVE</div>
+</header>
+
+<div class="panels">
+
+  <!-- VIDEO 1 -->
+
+  <div class="panel" id="panel1">
+    <div class="panel-header">
+      <span class="panel-num">01</span>
+      <span class="panel-label">VIDEO FEED</span>
+    </div>
+    <div class="url-row">
+      <input class="url-input" id="url1" type="url" placeholder="Paste YouTube link..." autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="btn-load" onclick="loadVideo(1)">LOAD</button>
+    </div>
+    <div class="video-frame" id="frame1">
+      <div class="video-placeholder">
+        <div class="icon">&#9654;</div>
+        <div class="txt">NO SIGNAL</div>
+      </div>
+      <div class="corner-tl"></div>
+      <div class="corner-br"></div>
+    </div>
+    <div class="vid-controls">
+      <button class="ctrl-btn" id="muteBtn1" onclick="toggleMute(1)">MUTE</button>
+      <button class="ctrl-btn" onclick="seekVideo(1,-10)">&#9664;&#9664; 10s</button>
+      <button class="ctrl-btn" onclick="seekVideo(1,10)">10s &#9654;&#9654;</button>
+      <button class="ctrl-btn pip-btn" onclick="requestPiP(1)">PiP</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- VIDEO 2 -->
+
+  <div class="panel" id="panel2">
+    <div class="panel-header">
+      <span class="panel-num">02</span>
+      <span class="panel-label">VIDEO FEED</span>
+    </div>
+    <div class="url-row">
+      <input class="url-input" id="url2" type="url" placeholder="Paste YouTube link..." autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="btn-load" onclick="loadVideo(2)">LOAD</button>
+    </div>
+    <div class="video-frame" id="frame2">
+      <div class="video-placeholder">
+        <div class="icon">&#9654;</div>
+        <div class="txt">NO SIGNAL</div>
+      </div>
+      <div class="corner-tl"></div>
+      <div class="corner-br"></div>
+    </div>
+    <div class="vid-controls">
+      <button class="ctrl-btn" id="muteBtn2" onclick="toggleMute(2)">MUTE</button>
+      <button class="ctrl-btn" onclick="seekVideo(2,-10)">&#9664;&#9664; 10s</button>
+      <button class="ctrl-btn" onclick="seekVideo(2,10)">10s &#9654;&#9654;</button>
+      <button class="ctrl-btn pip-btn" onclick="requestPiP(2)">PiP</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- VIDEO 3 -->
+
+  <div class="panel" id="panel3">
+    <div class="panel-header">
+      <span class="panel-num">03</span>
+      <span class="panel-label">VIDEO FEED</span>
+    </div>
+    <div class="url-row">
+      <input class="url-input" id="url3" type="url" placeholder="Paste YouTube link..." autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="btn-load" onclick="loadVideo(3)">LOAD</button>
+    </div>
+    <div class="video-frame" id="frame3">
+      <div class="video-placeholder">
+        <div class="icon">&#9654;</div>
+        <div class="txt">NO SIGNAL</div>
+      </div>
+      <div class="corner-tl"></div>
+      <div class="corner-br"></div>
+    </div>
+    <div class="vid-controls">
+      <button class="ctrl-btn" id="muteBtn3" onclick="toggleMute(3)">MUTE</button>
+      <button class="ctrl-btn" onclick="seekVideo(3,-10)">&#9664;&#9664; 10s</button>
+      <button class="ctrl-btn" onclick="seekVideo(3,10)">10s &#9654;&#9654;</button>
+      <button class="ctrl-btn pip-btn" onclick="requestPiP(3)">PiP</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- GIF PANEL -->
+
+  <div class="panel gif-panel">
+    <div class="panel-header">
+      <span class="panel-num">04</span>
+      <span class="panel-label">GIF//STREAM</span>
+    </div>
+
+```
+<div class="gif-display" id="gifDisplay">
+  <div class="gif-placeholder" id="gifPlaceholder">
+    <div class="icon">&#9670;</div>
+    <div class="txt">GIF QUEUE EMPTY</div>
+  </div>
+  <img id="gifImg" src="" alt="" style="display:none;">
+  <div class="gif-counter" id="gifCounter" style="display:none;">1 / 1</div>
+</div>
+
+<div class="gif-progress">
+  <div class="gif-progress-bar" id="gifProgressBar"></div>
+</div>
+
+<div class="gif-controls">
+  <button class="gif-btn" onclick="gifPrev()">&#9664; PREV</button>
+  <div class="gif-info" id="gifInfo">-- / --</div>
+  <button class="gif-btn" onclick="gifNext()">NEXT &#9654;</button>
+  <button class="gif-btn" id="gifPauseBtn" onclick="toggleGifPause()">PAUSE</button>
+</div>
+
+<div class="gif-list-area">
+  <div class="gif-list-label">GIF LINKS // ONE PER LINE</div>
+  <textarea class="gif-textarea" id="gifTextarea" placeholder="https://media.giphy.com/media/xxx/giphy.gif&#10;https://media.giphy.com/media/yyy/giphy.gif&#10;..."></textarea>
+  <div class="gif-load-row">
+    <button class="btn-gif-load" onclick="loadGifQueue()">LOAD GIF QUEUE</button>
+  </div>
+</div>
+```
+
+  </div>
+
+</div>
+
+<footer>QUAD//FEED v1.0 &mdash; ALL SYSTEMS NOMINAL</footer>
+
+<script>
+// ── YOUTUBE HELPERS ──────────────────────────────────────────
+var muteState = { 1: false, 2: false, 3: false };
+var players = {};
+
+function extractVideoId(url) {
+  url = url.trim();
+  // youtu.be/ID
+  var m = url.match(/youtu\.be\/([^?&\s]+)/);
+  if (m) return m[1];
+  // v=ID
+  m = url.match(/[?&]v=([^?&\s]+)/);
+  if (m) return m[1];
+  // embed/ID
+  m = url.match(/embed\/([^?&\s]+)/);
+  if (m) return m[1];
+  // shorts/ID
+  m = url.match(/shorts\/([^?&\s]+)/);
+  if (m) return m[1];
+  return null;
+}
+
+function loadVideo(n) {
+  var input = document.getElementById('url' + n);
+  var url = input.value.trim();
+  if (!url) { alert('Paste a YouTube link first.'); return; }
+
+  var vid = extractVideoId(url);
+  if (!vid) { alert('Could not find a YouTube video ID in that link.'); return; }
+
+  var frame = document.getElementById('frame' + n);
+
+  // Build embed URL with controls, enablejsapi
+  var src = 'https://www.youtube.com/embed/' + vid +
+    '?enablejsapi=1&controls=1&rel=0&modestbranding=1&playsinline=1';
+
+  frame.innerHTML =
+    '<iframe id="yt' + n + '" src="' + src + '" ' +
+    'allow="autoplay; fullscreen; picture-in-picture" ' +
+    'allowfullscreen playsinline></iframe>' +
+    '<div class="corner-tl"></div><div class="corner-br"></div>';
+
+  players[n] = document.getElementById('yt' + n);
+
+  // Reset mute button
+  muteState[n] = false;
+  var mb = document.getElementById('muteBtn' + n);
+  mb.textContent = 'MUTE';
+  mb.classList.remove('muted');
+}
+
+function sendYTCommand(n, func, args) {
+  var iframe = players[n] || document.getElementById('yt' + n);
+  if (!iframe) return;
+  try {
+    var cmd = JSON.stringify({ event: 'command', func: func, args: args || [] });
+    iframe.contentWindow.postMessage(cmd, '*');
+  } catch(e) {}
+}
+
+function toggleMute(n) {
+  var btn = document.getElementById('muteBtn' + n);
+  muteState[n] = !muteState[n];
+  if (muteState[n]) {
+    sendYTCommand(n, 'mute');
+    btn.textContent = 'UNMUTE';
+    btn.classList.add('muted');
+  } else {
+    sendYTCommand(n, 'unMute');
+    btn.textContent = 'MUTE';
+    btn.classList.remove('muted');
+  }
+}
+
+function seekVideo(n, secs) {
+  // We use postMessage to get current time then seek
+  // Simple approach: just send seekBy via YT API
+  var iframe = players[n] || document.getElementById('yt' + n);
+  if (!iframe) return;
+  // YT iframe API seekTo isn't trivially available without full API load
+  // We'll reload the iframe at a rough offset using &start param as fallback
+  // Better: use postMessage getCurrentTime then seekTo
+  try {
+    iframe.contentWindow.postMessage(
+      JSON.stringify({ event: 'command', func: 'seekTo',
+        args: [0, true] }), '*'
+    );
+  } catch(e) {}
+  // Because we can't easily get current time without full YT API,
+  // show a toast hint
+  showToast('Use the YouTube player bar to scrub', 1800);
+}
+
+function requestPiP(n) {
+  var iframe = players[n] || document.getElementById('yt' + n);
+  if (!iframe) { showToast('Load a video first', 1500); return; }
+  try {
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture();
+    } else {
+      showToast('Tap fullscreen then use iOS PiP button', 2500);
+    }
+  } catch(e) {
+    showToast('Tap fullscreen then use iOS PiP button', 2500);
+  }
+}
+
+// ── TOAST ──────────────────────────────────────────────────
+var toastEl = null;
+function showToast(msg, dur) {
+  if (!toastEl) {
+    toastEl = document.createElement('div');
+    toastEl.style.cssText =
+      'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+      'background:#aa00ffcc;color:#fff;font-family:Courier New,monospace;' +
+      'font-size:11px;letter-spacing:1px;padding:8px 16px;border-radius:4px;' +
+      'z-index:9998;pointer-events:none;transition:opacity 0.3s;';
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent = msg;
+  toastEl.style.opacity = '1';
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(function() {
+    toastEl.style.opacity = '0';
+  }, dur || 2000);
+}
+
+// ── GIF SLIDESHOW ──────────────────────────────────────────
+var gifQueue = [];
+var gifIndex = 0;
+var gifPaused = false;
+var gifTimer = null;
+var gifProgressTimer = null;
+var gifDuration = 10000; // 10 seconds
+var gifProgressStart = 0;
+
+function loadGifQueue() {
+  var ta = document.getElementById('gifTextarea');
+  var lines = ta.value.split('\n');
+  var urls = [];
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (line.length > 4) urls.push(line);
+  }
+  if (urls.length === 0) {
+    showToast('Paste at least one GIF URL', 2000);
+    return;
+  }
+  gifQueue = urls;
+  gifIndex = 0;
+  gifPaused = false;
+  var pb = document.getElementById('gifPauseBtn');
+  pb.textContent = 'PAUSE';
+  pb.classList.remove('paused');
+  showGif(0);
+  startGifTimer();
+  showToast(urls.length + ' GIF' + (urls.length > 1 ? 'S' : '') + ' LOADED', 2000);
+}
+
+function showGif(idx) {
+  if (gifQueue.length === 0) return;
+  gifIndex = ((idx % gifQueue.length) + gifQueue.length) % gifQueue.length;
+
+  var img = document.getElementById('gifImg');
+  var ph = document.getElementById('gifPlaceholder');
+  var counter = document.getElementById('gifCounter');
+  var info = document.getElementById('gifInfo');
+
+  img.style.display = 'none';
+  img.src = '';
+
+  img.onload = function() {
+    ph.style.display = 'none';
+    img.style.display = 'block';
+  };
+  img.onerror = function() {
+    ph.style.display = 'flex';
+    img.style.display = 'none';
+    document.getElementById('gifPlaceholder').querySelector('.txt').textContent = 'LOAD ERROR';
+  };
+  img.src = gifQueue[gifIndex];
+
+  counter.style.display = 'block';
+  counter.textContent = (gifIndex + 1) + ' / ' + gifQueue.length;
+  info.textContent = (gifIndex + 1) + ' of ' + gifQueue.length;
+
+  // Reset progress bar
+  resetProgressBar();
+}
+
+function resetProgressBar() {
+  var bar = document.getElementById('gifProgressBar');
+  bar.style.width = '0%';
+  gifProgressStart = Date.now();
+  if (gifProgressTimer) clearInterval(gifProgressTimer);
+  if (!gifPaused) {
+    gifProgressTimer = setInterval(function() {
+      var elapsed = Date.now() - gifProgressStart;
+      var pct = Math.min(100, (elapsed / gifDuration) * 100);
+      bar.style.width = pct + '%';
+    }, 80);
+  }
+}
+
+function startGifTimer() {
+  clearTimeout(gifTimer);
+  if (gifQueue.length <= 1 || gifPaused) return;
+  gifTimer = setTimeout(function() {
+    gifNext();
+  }, gifDuration);
+}
+
+function gifNext() {
+  if (gifQueue.length === 0) return;
+  showGif(gifIndex + 1);
+  if (!gifPaused) startGifTimer();
+}
+
+function gifPrev() {
+  if (gifQueue.length === 0) return;
+  clearTimeout(gifTimer);
+  showGif(gifIndex - 1);
+  if (!gifPaused) startGifTimer();
+}
+
+function toggleGifPause() {
+  var btn = document.getElementById('gifPauseBtn');
+  gifPaused = !gifPaused;
+  if (gifPaused) {
+    clearTimeout(gifTimer);
+    clearInterval(gifProgressTimer);
+    btn.textContent = 'PLAY';
+    btn.classList.add('paused');
+    showToast('GIF SLIDESHOW PAUSED', 1500);
+  } else {
+    btn.textContent = 'PAUSE';
+    btn.classList.remove('paused');
+    resetProgressBar();
+    startGifTimer();
+    showToast('GIF SLIDESHOW RESUMED', 1500);
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────
+// Prevent zoom on double-tap
+var lastTap = 0;
+document.addEventListener('touchend', function(e) {
+  var now = Date.now();
+  if (now - lastTap < 300) e.preventDefault();
+  lastTap = now;
+}, { passive: false });
+</script>
+
+</body>
+</html>
