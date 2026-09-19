@@ -286,6 +286,44 @@ font-size: 10px;
 letter-spacing: 2px;
 }
 
+/* Full-size sequential gif window */
+.gif-main-frame {
+position: relative;
+width: 100%;
+padding-bottom: 56.25%;
+background: #02020a;
+overflow: hidden;
+}
+
+.gif-main-frame img {
+position: absolute;
+top: 0; left: 0;
+width: 100%; height: 100%;
+object-fit: contain;
+display: block;
+}
+
+.gif-main-frame .gif-placeholder {
+position: absolute;
+top: 0; left: 0; right: 0; bottom: 0;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 8px;
+color: #2a2a5a;
+}
+
+.gif-main-frame .gif-placeholder .icon {
+font-size: 36px;
+opacity: 0.3;
+}
+
+.gif-main-frame .gif-placeholder .txt {
+font-size: 10px;
+letter-spacing: 2px;
+}
+
 .gif-counter {
 position: absolute;
 top: 6px;
@@ -644,11 +682,44 @@ border-top: 1px solid #1a1a3a;
 
   <div class="divider"></div>
 
-  <!-- GIF PANEL -->
+  <!-- GIF MAIN (full-size, sequential) -->
 
   <div class="panel gif-panel">
     <div class="panel-header">
       <span class="panel-num">04</span>
+      <span class="panel-label">GIF//MAIN</span>
+    </div>
+
+    <div class="gif-main-frame" id="gifMainFrame">
+      <div class="gif-placeholder" id="gifMainPlaceholder">
+        <div class="icon">&#9670;</div>
+        <div class="txt">GIF QUEUE EMPTY</div>
+      </div>
+      <img id="gifMainImg" src="" alt="" style="display:none;">
+      <div class="gif-counter" id="gifMainCounter" style="display:none;">1 / 1</div>
+      <div class="corner-tl"></div>
+      <div class="corner-br"></div>
+    </div>
+
+    <div class="gif-progress">
+      <div class="gif-progress-bar" id="gifMainProgressBar"></div>
+    </div>
+
+    <div class="gif-controls">
+      <button class="gif-btn" onclick="mainGifPrev()">&#9664; PREV</button>
+      <div class="gif-info" id="gifMainInfo">-- / --</div>
+      <button class="gif-btn" onclick="mainGifNext()">NEXT &#9654;</button>
+      <button class="gif-btn" id="gifMainPauseBtn" onclick="toggleMainGifPause()">PAUSE</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- GIF PANEL -->
+
+  <div class="panel gif-panel">
+    <div class="panel-header">
+      <span class="panel-num">05</span>
       <span class="panel-label">GIF//STREAM</span>
     </div>
 
@@ -851,6 +922,15 @@ function loadGifQueue() {
   pb.classList.remove('paused');
   showGif(0);
   startGifTimer();
+
+  mainGifIndex = 0;
+  mainGifPaused = false;
+  var mpb = document.getElementById('gifMainPauseBtn');
+  mpb.textContent = 'PAUSE';
+  mpb.classList.remove('paused');
+  showMainGif(0);
+  startMainGifTimer();
+
   showToast(urls.length + ' GIF' + (urls.length > 1 ? 'S' : '') + ' LOADED', 2000);
 }
 
@@ -935,6 +1015,96 @@ function toggleGifPause() {
     resetProgressBar();
     startGifTimer();
     showToast('GIF SLIDESHOW RESUMED', 1500);
+  }
+}
+
+// ── GIF MAIN (full-size, sequential, in order) ──────────────
+var mainGifIndex = 0;
+var mainGifPaused = false;
+var mainGifTimer = null;
+var mainGifProgressTimer = null;
+var mainGifProgressStart = 0;
+
+function showMainGif(idx) {
+  if (gifQueue.length === 0) return;
+  mainGifIndex = ((idx % gifQueue.length) + gifQueue.length) % gifQueue.length;
+
+  var img = document.getElementById('gifMainImg');
+  var ph = document.getElementById('gifMainPlaceholder');
+  var counter = document.getElementById('gifMainCounter');
+  var info = document.getElementById('gifMainInfo');
+
+  img.style.display = 'none';
+  img.src = '';
+
+  img.onload = function() {
+    ph.style.display = 'none';
+    img.style.display = 'block';
+  };
+  img.onerror = function() {
+    ph.style.display = 'flex';
+    img.style.display = 'none';
+    ph.querySelector('.txt').textContent = 'LOAD ERROR';
+  };
+  img.src = gifQueue[mainGifIndex];
+
+  counter.style.display = 'block';
+  counter.textContent = (mainGifIndex + 1) + ' / ' + gifQueue.length;
+  info.textContent = (mainGifIndex + 1) + ' of ' + gifQueue.length;
+
+  resetMainProgressBar();
+}
+
+function resetMainProgressBar() {
+  var bar = document.getElementById('gifMainProgressBar');
+  bar.style.width = '0%';
+  mainGifProgressStart = Date.now();
+  if (mainGifProgressTimer) clearInterval(mainGifProgressTimer);
+  if (!mainGifPaused) {
+    mainGifProgressTimer = setInterval(function() {
+      var elapsed = Date.now() - mainGifProgressStart;
+      var pct = Math.min(100, (elapsed / gifDuration) * 100);
+      bar.style.width = pct + '%';
+    }, 80);
+  }
+}
+
+function startMainGifTimer() {
+  clearTimeout(mainGifTimer);
+  if (gifQueue.length <= 1 || mainGifPaused) return;
+  mainGifTimer = setTimeout(function() {
+    mainGifNext();
+  }, gifDuration);
+}
+
+function mainGifNext() {
+  if (gifQueue.length === 0) return;
+  showMainGif(mainGifIndex + 1);
+  if (!mainGifPaused) startMainGifTimer();
+}
+
+function mainGifPrev() {
+  if (gifQueue.length === 0) return;
+  clearTimeout(mainGifTimer);
+  showMainGif(mainGifIndex - 1);
+  if (!mainGifPaused) startMainGifTimer();
+}
+
+function toggleMainGifPause() {
+  var btn = document.getElementById('gifMainPauseBtn');
+  mainGifPaused = !mainGifPaused;
+  if (mainGifPaused) {
+    clearTimeout(mainGifTimer);
+    clearInterval(mainGifProgressTimer);
+    btn.textContent = 'PLAY';
+    btn.classList.add('paused');
+    showToast('MAIN GIF PAUSED', 1500);
+  } else {
+    btn.textContent = 'PAUSE';
+    btn.classList.remove('paused');
+    resetMainProgressBar();
+    startMainGifTimer();
+    showToast('MAIN GIF RESUMED', 1500);
   }
 }
 
