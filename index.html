@@ -11,14 +11,14 @@
 body {
 background: #030308;
 color: #e0e0ff;
-font-family: ‘Courier New’, monospace;
+font-family: 'Courier New', monospace;
 min-height: 100vh;
 overflow-x: hidden;
 }
 
 /* Scanline overlay */
 body::before {
-content: ‘’;
+content: '';
 position: fixed;
 top: 0; left: 0; right: 0; bottom: 0;
 background: repeating-linear-gradient(
@@ -118,7 +118,7 @@ background: #0d0d20;
 border: 1px solid #2a2a5a;
 border-radius: 3px;
 color: #a0a0ff;
-font-family: ‘Courier New’, monospace;
+font-family: 'Courier New', monospace;
 font-size: 11px;
 padding: 5px 8px;
 outline: none;
@@ -138,7 +138,7 @@ color: #3a3a6a;
 background: transparent;
 border: 1px solid #00ffe0;
 color: #00ffe0;
-font-family: ‘Courier New’, monospace;
+font-family: 'Courier New', monospace;
 font-size: 10px;
 letter-spacing: 1px;
 padding: 5px 10px;
@@ -208,7 +208,7 @@ flex-wrap: wrap;
 background: transparent;
 border: 1px solid #ff00aa44;
 color: #ff00aa;
-font-family: ‘Courier New’, monospace;
+font-family: 'Courier New', monospace;
 font-size: 10px;
 padding: 4px 8px;
 border-radius: 3px;
@@ -254,6 +254,10 @@ align-items: center;
 justify-content: center;
 position: relative;
 overflow: hidden;
+}
+
+.gif-display.slot-active {
+min-height: 340px;
 }
 
 .gif-display img {
@@ -324,7 +328,7 @@ border-top: 1px solid #111128;
 background: transparent;
 border: 1px solid #aa00ff44;
 color: #aa00ff;
-font-family: ‘Courier New’, monospace;
+font-family: 'Courier New', monospace;
 font-size: 11px;
 padding: 5px 10px;
 border-radius: 3px;
@@ -373,7 +377,7 @@ background: #0d0d20;
 border: 1px solid #2a2a5a;
 border-radius: 3px;
 color: #a0a0ff;
-font-family: ‘Courier New’, monospace;
+font-family: 'Courier New', monospace;
 font-size: 11px;
 padding: 6px 8px;
 height: 80px;
@@ -402,7 +406,7 @@ flex: 1;
 background: transparent;
 border: 1px solid #aa00ff;
 color: #aa00ff;
-font-family: ‘Courier New’, monospace;
+font-family: 'Courier New', monospace;
 font-size: 10px;
 letter-spacing: 2px;
 padding: 6px;
@@ -416,6 +420,69 @@ transition: all 0.15s;
 .btn-gif-load:active {
 background: #aa00ff20;
 box-shadow: 0 0 12px #aa00ff60;
+}
+
+.btn-slot {
+border-color: #ff00aa;
+color: #ff00aa;
+text-shadow: 0 0 6px #ff00aa;
+box-shadow: 0 0 6px #ff00aa20;
+}
+
+.btn-slot:active {
+background: #ff00aa20;
+box-shadow: 0 0 12px #ff00aa60;
+}
+
+.btn-slot.active {
+background: #ff00aa20;
+box-shadow: 0 0 14px #ff00aa90;
+animation: slotPulse 1.4s infinite;
+}
+
+@keyframes slotPulse {
+0%, 100% { box-shadow: 0 0 8px #ff00aa60; }
+50% { box-shadow: 0 0 18px #ff00aaa0; }
+}
+
+/* ── SLOT MACHINE GRID ── */
+.slot-grid {
+position: absolute;
+top: 0; left: 0; right: 0; bottom: 0;
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+grid-template-rows: repeat(3, 1fr);
+gap: 2px;
+background: #1a1a3a;
+}
+
+.slot-tile {
+position: relative;
+overflow: hidden;
+background: #02020a;
+}
+
+.slot-tile img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+display: block;
+opacity: 0;
+transition: opacity 0.25s ease;
+}
+
+.slot-tile img.loaded {
+opacity: 1;
+}
+
+.slot-tile .slot-tile-placeholder {
+position: absolute;
+top: 0; left: 0; right: 0; bottom: 0;
+display: flex;
+align-items: center;
+justify-content: center;
+color: #2a2a5a;
+font-size: 16px;
 }
 
 /* Corner decorations */
@@ -557,7 +624,6 @@ border-top: 1px solid #1a1a3a;
       <span class="panel-label">GIF//STREAM</span>
     </div>
 
-```
 <div class="gif-display" id="gifDisplay">
   <div class="gif-placeholder" id="gifPlaceholder">
     <div class="icon">&#9670;</div>
@@ -565,13 +631,14 @@ border-top: 1px solid #1a1a3a;
   </div>
   <img id="gifImg" src="" alt="" style="display:none;">
   <div class="gif-counter" id="gifCounter" style="display:none;">1 / 1</div>
+  <div class="slot-grid" id="slotGrid" style="display:none;"></div>
 </div>
 
-<div class="gif-progress">
+<div class="gif-progress" id="gifProgressWrap">
   <div class="gif-progress-bar" id="gifProgressBar"></div>
 </div>
 
-<div class="gif-controls">
+<div class="gif-controls" id="gifControls">
   <button class="gif-btn" onclick="gifPrev()">&#9664; PREV</button>
   <div class="gif-info" id="gifInfo">-- / --</div>
   <button class="gif-btn" onclick="gifNext()">NEXT &#9654;</button>
@@ -584,8 +651,10 @@ border-top: 1px solid #1a1a3a;
   <div class="gif-load-row">
     <button class="btn-gif-load" onclick="loadGifQueue()">LOAD GIF QUEUE</button>
   </div>
+  <div class="gif-load-row">
+    <button class="btn-gif-load btn-slot" id="slotBtn" onclick="toggleSlotMachine()">&#127920; SLOT MACHINE</button>
+  </div>
 </div>
-```
 
   </div>
 
@@ -741,6 +810,7 @@ function loadGifQueue() {
     showToast('Paste at least one GIF URL', 2000);
     return;
   }
+  if (slotActive) exitSlotUI();
   gifQueue = urls;
   gifIndex = 0;
   gifPaused = false;
@@ -834,6 +904,142 @@ function toggleGifPause() {
     startGifTimer();
     showToast('GIF SLIDESHOW RESUMED', 1500);
   }
+}
+
+// ── SLOT MACHINE MODE ───────────────────────────────────────
+var SLOT_TILE_COUNT = 9;
+var slotActive = false;
+var slotTimers = [];
+var slotTileGif = [];
+
+function toggleSlotMachine() {
+  if (slotActive) {
+    stopSlotMachine();
+  } else {
+    startSlotMachine();
+  }
+}
+
+function startSlotMachine() {
+  if (gifQueue.length === 0) {
+    var ta = document.getElementById('gifTextarea');
+    if (ta.value.trim().length > 0) loadGifQueue();
+  }
+  if (gifQueue.length === 0) {
+    showToast('Load at least one GIF URL first', 2000);
+    return;
+  }
+
+  slotActive = true;
+  clearTimeout(gifTimer);
+  clearInterval(gifProgressTimer);
+
+  document.getElementById('gifImg').style.display = 'none';
+  document.getElementById('gifPlaceholder').style.display = 'none';
+  document.getElementById('gifCounter').style.display = 'none';
+  document.getElementById('gifProgressWrap').style.display = 'none';
+  document.getElementById('gifControls').style.display = 'none';
+  document.getElementById('gifDisplay').classList.add('slot-active');
+
+  var grid = document.getElementById('slotGrid');
+  grid.innerHTML = '';
+  grid.style.display = 'grid';
+
+  slotTileGif = [];
+  slotTimers.forEach(function(t) { clearTimeout(t); });
+  slotTimers = [];
+
+  for (var i = 0; i < SLOT_TILE_COUNT; i++) {
+    var tile = document.createElement('div');
+    tile.className = 'slot-tile';
+    tile.id = 'slotTile' + i;
+    grid.appendChild(tile);
+    slotTileGif.push(null);
+    swapTileGif(i);
+    scheduleTile(i);
+  }
+
+  var btn = document.getElementById('slotBtn');
+  btn.textContent = '■ STOP SLOT MACHINE';
+  btn.classList.add('active');
+  showToast('SLOT MACHINE ENGAGED — ' + SLOT_TILE_COUNT + ' REELS', 2000);
+}
+
+function exitSlotUI() {
+  slotActive = false;
+  slotTimers.forEach(function(t) { clearTimeout(t); });
+  slotTimers = [];
+  document.getElementById('slotGrid').style.display = 'none';
+  document.getElementById('gifDisplay').classList.remove('slot-active');
+  document.getElementById('gifProgressWrap').style.display = '';
+  document.getElementById('gifControls').style.display = '';
+  var btn = document.getElementById('slotBtn');
+  btn.textContent = '🎰 SLOT MACHINE';
+  btn.classList.remove('active');
+}
+
+function stopSlotMachine() {
+  exitSlotUI();
+  if (gifQueue.length > 0) {
+    showGif(gifIndex);
+    startGifTimer();
+  }
+  showToast('SLOT MACHINE STOPPED', 1500);
+}
+
+function pickTileGif(tileIdx) {
+  if (gifQueue.length === 0) return null;
+  if (gifQueue.length === 1) return gifQueue[0];
+
+  var exclude = {};
+  for (var i = 0; i < slotTileGif.length; i++) {
+    if (i !== tileIdx && slotTileGif[i]) exclude[slotTileGif[i]] = true;
+  }
+  if (slotTileGif[tileIdx]) exclude[slotTileGif[tileIdx]] = true;
+
+  var candidates = gifQueue.filter(function(u) { return !exclude[u]; });
+  if (candidates.length === 0) {
+    candidates = gifQueue.filter(function(u) { return u !== slotTileGif[tileIdx]; });
+  }
+  if (candidates.length === 0) candidates = gifQueue;
+
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function swapTileGif(tileIdx) {
+  if (!slotActive) return;
+  var url = pickTileGif(tileIdx);
+  if (!url) return;
+  slotTileGif[tileIdx] = url;
+
+  var tile = document.getElementById('slotTile' + tileIdx);
+  if (!tile) return;
+
+  var img = document.createElement('img');
+  img.onload = function() {
+    if (!slotActive) return;
+    tile.innerHTML = '';
+    img.classList.add('loaded');
+    tile.appendChild(img);
+  };
+  img.onerror = function() {
+    if (!slotActive) return;
+    tile.innerHTML = '';
+    var ph = document.createElement('div');
+    ph.className = 'slot-tile-placeholder';
+    ph.textContent = '✖';
+    tile.appendChild(ph);
+  };
+  img.src = url;
+}
+
+function scheduleTile(tileIdx) {
+  if (!slotActive) return;
+  var delay = 10000 + Math.random() * 5000; // random 10-15s per reel
+  slotTimers[tileIdx] = setTimeout(function() {
+    swapTileGif(tileIdx);
+    scheduleTile(tileIdx);
+  }, delay);
 }
 
 // ── INIT ──────────────────────────────────────────────────
