@@ -445,6 +445,34 @@ animation: slotPulse 1.4s infinite;
 50% { box-shadow: 0 0 18px #ff00aaa0; }
 }
 
+/* Slot machine layout picker */
+.slot-mode-row {
+display: flex;
+gap: 6px;
+margin-top: 5px;
+}
+
+.slot-mode-btn {
+flex: 1;
+background: transparent;
+border: 1px solid #55336a;
+color: #7a5aa8;
+font-family: 'Courier New', monospace;
+font-size: 9px;
+letter-spacing: 1px;
+padding: 5px;
+border-radius: 3px;
+cursor: pointer;
+transition: all 0.15s;
+}
+
+.slot-mode-btn.active {
+border-color: #ff00aa;
+color: #ff00aa;
+text-shadow: 0 0 6px #ff00aa;
+box-shadow: 0 0 6px #ff00aa30;
+}
+
 /* ── SLOT MACHINE GRID ── */
 .slot-grid {
 position: absolute;
@@ -650,6 +678,10 @@ border-top: 1px solid #1a1a3a;
   <textarea class="gif-textarea" id="gifTextarea" placeholder="https://media.giphy.com/media/xxx/giphy.gif&#10;https://media.giphy.com/media/yyy/giphy.gif&#10;..."></textarea>
   <div class="gif-load-row">
     <button class="btn-gif-load" onclick="loadGifQueue()">LOAD GIF QUEUE</button>
+  </div>
+  <div class="slot-mode-row">
+    <button class="slot-mode-btn active" id="modeBtn9" onclick="setSlotMode('nine')">3&times;3 (9 GIFS)</button>
+    <button class="slot-mode-btn" id="modeBtn3" onclick="setSlotMode('three')">3 SIDE BY SIDE</button>
   </div>
   <div class="gif-load-row">
     <button class="btn-gif-load btn-slot" id="slotBtn" onclick="toggleSlotMachine()">&#127920; SLOT MACHINE</button>
@@ -907,10 +939,22 @@ function toggleGifPause() {
 }
 
 // ── SLOT MACHINE MODE ───────────────────────────────────────
-var SLOT_TILE_COUNT = 9;
+var SLOT_MODES = {
+  nine:  { count: 9, cols: 3, rows: 3, minHeight: 340, label: '3×3 (9 GIFS)' },
+  three: { count: 3, cols: 3, rows: 1, minHeight: 200, label: '3 SIDE BY SIDE' }
+};
+var slotMode = 'nine';
 var slotActive = false;
 var slotTimers = [];
 var slotTileGif = [];
+
+function setSlotMode(mode) {
+  if (!SLOT_MODES[mode]) return;
+  slotMode = mode;
+  document.getElementById('modeBtn9').classList.toggle('active', mode === 'nine');
+  document.getElementById('modeBtn3').classList.toggle('active', mode === 'three');
+  if (slotActive) startSlotMachine(); // live-switch layout without stopping
+}
 
 function toggleSlotMachine() {
   if (slotActive) {
@@ -930,6 +974,8 @@ function startSlotMachine() {
     return;
   }
 
+  var config = SLOT_MODES[slotMode];
+
   slotActive = true;
   clearTimeout(gifTimer);
   clearInterval(gifProgressTimer);
@@ -939,17 +985,21 @@ function startSlotMachine() {
   document.getElementById('gifCounter').style.display = 'none';
   document.getElementById('gifProgressWrap').style.display = 'none';
   document.getElementById('gifControls').style.display = 'none';
-  document.getElementById('gifDisplay').classList.add('slot-active');
+  var displayEl = document.getElementById('gifDisplay');
+  displayEl.classList.add('slot-active');
+  displayEl.style.minHeight = config.minHeight + 'px';
 
   var grid = document.getElementById('slotGrid');
   grid.innerHTML = '';
   grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(' + config.cols + ', 1fr)';
+  grid.style.gridTemplateRows = 'repeat(' + config.rows + ', 1fr)';
 
   slotTileGif = [];
   slotTimers.forEach(function(t) { clearTimeout(t); });
   slotTimers = [];
 
-  for (var i = 0; i < SLOT_TILE_COUNT; i++) {
+  for (var i = 0; i < config.count; i++) {
     var tile = document.createElement('div');
     tile.className = 'slot-tile';
     tile.id = 'slotTile' + i;
@@ -962,7 +1012,7 @@ function startSlotMachine() {
   var btn = document.getElementById('slotBtn');
   btn.textContent = '■ STOP SLOT MACHINE';
   btn.classList.add('active');
-  showToast('SLOT MACHINE ENGAGED — ' + SLOT_TILE_COUNT + ' REELS', 2000);
+  showToast('SLOT MACHINE ENGAGED — ' + config.label, 2000);
 }
 
 function exitSlotUI() {
@@ -970,7 +1020,9 @@ function exitSlotUI() {
   slotTimers.forEach(function(t) { clearTimeout(t); });
   slotTimers = [];
   document.getElementById('slotGrid').style.display = 'none';
-  document.getElementById('gifDisplay').classList.remove('slot-active');
+  var displayEl = document.getElementById('gifDisplay');
+  displayEl.classList.remove('slot-active');
+  displayEl.style.minHeight = '';
   document.getElementById('gifProgressWrap').style.display = '';
   document.getElementById('gifControls').style.display = '';
   var btn = document.getElementById('slotBtn');
