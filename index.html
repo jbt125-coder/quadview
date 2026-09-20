@@ -37,7 +37,7 @@ padding: 10px 14px 6px;
 border-bottom: 1px solid #00ffe0;
 display: flex;
 align-items: center;
-justify-content: space-between;
+gap: 10px;
 background: #030308;
 position: sticky;
 top: 0;
@@ -45,6 +45,8 @@ z-index: 100;
 }
 
 header h1 {
+flex: 1;
+text-align: center;
 font-size: 18px;
 font-weight: 700;
 letter-spacing: 4px;
@@ -52,17 +54,166 @@ color: #00ffe0;
 text-shadow: 0 0 10px #00ffe0, 0 0 30px #00ffe060;
 }
 
-header .status {
-font-size: 10px;
+.menu-btn {
+background: transparent;
+border: 1px solid #ff00aa;
 color: #ff00aa;
-letter-spacing: 2px;
-text-shadow: 0 0 8px #ff00aa;
-animation: blink 2s infinite;
+font-size: 16px;
+line-height: 1;
+padding: 5px 10px;
+border-radius: 3px;
+cursor: pointer;
+text-shadow: 0 0 6px #ff00aa;
+box-shadow: 0 0 6px #ff00aa20;
+transition: all 0.15s;
 }
 
-@keyframes blink {
-0%, 100% { opacity: 1; }
-50% { opacity: 0.3; }
+.menu-btn:active, .menu-btn.open {
+background: #ff00aa20;
+box-shadow: 0 0 12px #ff00aa60;
+}
+
+/* Save/Load menu panel */
+.menu-panel {
+display: none;
+position: absolute;
+top: 100%;
+left: 14px;
+width: min(300px, calc(100vw - 28px));
+background: #07070f;
+border: 1px solid #ff00aa;
+border-radius: 4px;
+box-shadow: 0 0 20px #ff00aa40, 0 6px 24px rgba(0,0,0,0.6);
+z-index: 200;
+padding: 10px;
+max-height: 70vh;
+overflow-y: auto;
+}
+
+.menu-section + .menu-section {
+margin-top: 10px;
+padding-top: 10px;
+border-top: 1px solid #1a1a3a;
+}
+
+.menu-label {
+font-size: 9px;
+letter-spacing: 2px;
+color: #5a5a8a;
+margin-bottom: 6px;
+}
+
+.menu-save-row {
+display: flex;
+gap: 6px;
+}
+
+.menu-input {
+flex: 1;
+background: #0d0d20;
+border: 1px solid #2a2a5a;
+border-radius: 3px;
+color: #a0a0ff;
+font-family: 'Courier New', monospace;
+font-size: 11px;
+padding: 5px 8px;
+outline: none;
+transition: border-color 0.2s;
+}
+
+.menu-input:focus {
+border-color: #ff00aa;
+box-shadow: 0 0 6px #ff00aa40;
+}
+
+.menu-input::placeholder {
+color: #3a3a6a;
+}
+
+.menu-btn-action {
+background: transparent;
+border: 1px solid #ff00aa;
+color: #ff00aa;
+font-family: 'Courier New', monospace;
+font-size: 10px;
+letter-spacing: 1px;
+padding: 5px 10px;
+border-radius: 3px;
+cursor: pointer;
+white-space: nowrap;
+text-shadow: 0 0 6px #ff00aa;
+transition: all 0.15s;
+}
+
+.menu-btn-action:active {
+background: #ff00aa20;
+box-shadow: 0 0 12px #ff00aa60;
+}
+
+.save-list-empty {
+font-size: 10px;
+color: #3a3a6a;
+letter-spacing: 1px;
+padding: 10px 0;
+text-align: center;
+}
+
+.save-item {
+display: flex;
+align-items: center;
+gap: 6px;
+padding: 7px 0;
+border-bottom: 1px solid #111128;
+}
+
+.save-item:last-child {
+border-bottom: none;
+}
+
+.save-item-info {
+flex: 1;
+min-width: 0;
+}
+
+.save-item-name {
+font-size: 11px;
+color: #00ffe0;
+letter-spacing: 1px;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+
+.save-item-meta {
+font-size: 9px;
+color: #5a5a8a;
+margin-top: 2px;
+}
+
+.save-item-btn {
+background: transparent;
+border: 1px solid #aa00ff44;
+color: #aa00ff;
+font-family: 'Courier New', monospace;
+font-size: 9px;
+padding: 4px 7px;
+border-radius: 3px;
+cursor: pointer;
+white-space: nowrap;
+transition: all 0.15s;
+}
+
+.save-item-btn:active {
+background: #aa00ff20;
+}
+
+.save-item-btn.danger {
+border-color: #ff004466;
+color: #ff0044;
+}
+
+.save-item-btn.danger:active {
+background: #ff004420;
 }
 
 .panels {
@@ -589,8 +740,22 @@ border-top: 1px solid #1a1a3a;
 <body>
 
 <header>
+  <button class="menu-btn" id="menuBtn" onclick="toggleMenu()">&#9776;</button>
   <h1>QUAD//FEED</h1>
-  <div class="status">LIVE</div>
+
+  <div class="menu-panel" id="menuPanel">
+    <div class="menu-section">
+      <div class="menu-label">SAVE STATE</div>
+      <div class="menu-save-row">
+        <input class="menu-input" id="saveNameInput" type="text" placeholder="Save name..." autocomplete="off" autocorrect="off" spellcheck="false">
+        <button class="menu-btn-action" onclick="saveState()">SAVE</button>
+      </div>
+    </div>
+    <div class="menu-section">
+      <div class="menu-label">LOAD STATE</div>
+      <div class="save-list" id="saveList"></div>
+    </div>
+  </div>
 </header>
 
 <div class="panels">
@@ -1262,6 +1427,156 @@ function scheduleTile(tileIdx) {
     swapTileGif(tileIdx);
     scheduleTile(tileIdx);
   }, delay);
+}
+
+// ── SAVE / LOAD STATE ───────────────────────────────────────
+var SAVE_STORAGE_KEY = 'quadfeed_saves';
+
+function toggleMenu() {
+  var panel = document.getElementById('menuPanel');
+  var btn = document.getElementById('menuBtn');
+  var isOpen = panel.style.display === 'block';
+  if (isOpen) {
+    panel.style.display = 'none';
+    btn.classList.remove('open');
+  } else {
+    renderSaveList();
+    panel.style.display = 'block';
+    btn.classList.add('open');
+  }
+}
+
+document.addEventListener('click', function(e) {
+  var panel = document.getElementById('menuPanel');
+  var btn = document.getElementById('menuBtn');
+  if (panel.style.display === 'block' && !panel.contains(e.target) && e.target !== btn) {
+    panel.style.display = 'none';
+    btn.classList.remove('open');
+  }
+});
+
+function getSaves() {
+  try {
+    var raw = localStorage.getItem(SAVE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function setSaves(saves) {
+  try {
+    localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(saves));
+  } catch (e) {
+    showToast('Could not save (storage unavailable)', 2500);
+  }
+}
+
+function saveState() {
+  var input = document.getElementById('saveNameInput');
+  var name = input.value.trim();
+  if (!name) {
+    showToast('Enter a save name first', 2000);
+    return;
+  }
+
+  var videos = [
+    document.getElementById('url1').value.trim(),
+    document.getElementById('url2').value.trim(),
+    document.getElementById('url3').value.trim()
+  ];
+  var gifText = document.getElementById('gifTextarea').value;
+
+  var saves = getSaves();
+  var existingIdx = -1;
+  for (var i = 0; i < saves.length; i++) {
+    if (saves[i].name === name) { existingIdx = i; break; }
+  }
+  var entry = { name: name, timestamp: Date.now(), videos: videos, gifText: gifText };
+  if (existingIdx >= 0) {
+    saves[existingIdx] = entry;
+  } else {
+    saves.push(entry);
+  }
+  setSaves(saves);
+  input.value = '';
+  renderSaveList();
+  showToast('SAVED "' + name + '"', 1800);
+}
+
+function renderSaveList() {
+  var list = document.getElementById('saveList');
+  var saves = getSaves();
+  list.innerHTML = '';
+
+  if (saves.length === 0) {
+    var empty = document.createElement('div');
+    empty.className = 'save-list-empty';
+    empty.textContent = 'NO SAVED STATES';
+    list.appendChild(empty);
+    return;
+  }
+
+  saves.slice().sort(function(a, b) { return b.timestamp - a.timestamp; }).forEach(function(save) {
+    var item = document.createElement('div');
+    item.className = 'save-item';
+
+    var info = document.createElement('div');
+    info.className = 'save-item-info';
+    var nameEl = document.createElement('div');
+    nameEl.className = 'save-item-name';
+    nameEl.textContent = save.name;
+    var metaEl = document.createElement('div');
+    metaEl.className = 'save-item-meta';
+    metaEl.textContent = new Date(save.timestamp).toLocaleString();
+    info.appendChild(nameEl);
+    info.appendChild(metaEl);
+
+    var loadBtn = document.createElement('button');
+    loadBtn.className = 'save-item-btn';
+    loadBtn.textContent = 'LOAD';
+    loadBtn.onclick = function() { loadState(save.name); };
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'save-item-btn danger';
+    delBtn.textContent = 'DEL';
+    delBtn.onclick = function() { deleteState(save.name); };
+
+    item.appendChild(info);
+    item.appendChild(loadBtn);
+    item.appendChild(delBtn);
+    list.appendChild(item);
+  });
+}
+
+function loadState(name) {
+  var saves = getSaves();
+  var save = null;
+  for (var i = 0; i < saves.length; i++) {
+    if (saves[i].name === name) { save = saves[i]; break; }
+  }
+  if (!save) return;
+
+  for (var n = 1; n <= 3; n++) {
+    var url = (save.videos && save.videos[n - 1]) || '';
+    document.getElementById('url' + n).value = url;
+    if (url) loadVideo(n);
+  }
+
+  document.getElementById('gifTextarea').value = save.gifText || '';
+  if (save.gifText && save.gifText.trim().length > 0) {
+    loadGifQueue();
+  }
+
+  toggleMenu();
+  showToast('LOADED "' + name + '"', 2000);
+}
+
+function deleteState(name) {
+  var saves = getSaves().filter(function(s) { return s.name !== name; });
+  setSaves(saves);
+  renderSaveList();
+  showToast('DELETED "' + name + '"', 1500);
 }
 
 // ── INIT ──────────────────────────────────────────────────
